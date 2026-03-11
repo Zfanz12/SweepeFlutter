@@ -1,0 +1,24 @@
+name: sweepe
+description: Bersihkan galerimu, effortless.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  provider: ^6.1.2
+  file_picker: ^8.1.4
+  shared_preferences: ^2.3.3
+  path: ^1.9.0
+  window_manager: ^0.4.3
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
