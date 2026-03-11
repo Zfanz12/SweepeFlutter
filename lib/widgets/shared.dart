@@ -127,7 +127,7 @@ class FreedCard extends StatelessWidget {
     final unit   = parts.length > 1  ? parts[1] : '';
 
     return Container(
-      width: 130, height: 80,
+      width: 200, height: 88,
       decoration: BoxDecoration(
         color: kBgCard,
         border: Border(
@@ -144,15 +144,15 @@ class FreedCard extends StatelessWidget {
           children: [
             Text(number, style: const TextStyle(
                 fontFamily: 'Courier New',
-                fontSize: 30,
+                fontSize: 36,
                 fontWeight: FontWeight.bold,
                 color: kTeal)),
             const SizedBox(width: 4),
             Padding(
-              padding: const EdgeInsets.only(bottom: 4),
+              padding: const EdgeInsets.only(bottom: 5),
               child: Text(unit, style: const TextStyle(
                   fontFamily: 'Consolas',
-                  fontSize: 13,
+                  fontSize: 15,
                   fontWeight: FontWeight.bold,
                   color: kTeal)),
             ),
