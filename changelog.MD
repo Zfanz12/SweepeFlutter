@@ -1,54 +1,43 @@
-\# Changelog
-
-
+# Changelog
 
 All notable changes to Sweepe will be documented in this file.
 
+## [0.2.0] - 2026-04-11
 
+### Added
+- **Batch Deletion Engine** — Reworked the "move to Recycle Bin" operation to process files in bulk rather than one by one, significantly improving execution speed.
+- **Deletion Progress Dialog** — Added a pop-up loading dialog ("Deleting...") during file removal, featuring a progress bar and time elapsed indicator to provide clear feedback during large batch operations.
+- **Confirmation Dialog** — Added a safety prompt requiring user confirmation before executing the deletion process.
+- **Date Range Labels** — Added clear start and end date labels within the Weekly Group mode for easier chronological navigation.
+- **Grouped Summary** — The list of deleted photos in the Summary view is now grouped chronologically (by week/month) and includes collapsible sections for better readability.
+- **Navigation Arrows** — Added directional arrow overlays to the "current picture" carousel to improve navigational UX.
 
-\## \[0.2.0] - 2026-04-11
+### Changed
+- **Color-Coded Progress Bar** — Upgraded the global progress bar to visually represent actions using color codes (e.g., blue for kept photos, orange for deleted photos) proportionate to the total count.
 
+### Fixed
+- **State Inconsistency Bug** — Fixed a complex bug where photos initially marked as "skip" and later flagged as "keep/delete" still falsely incremented the skipped counter, causing downstream logic errors.
 
+## [0.1.1] - 2026-04-01
 
-\### Fixed
+### Added
+- **MTP Folder Picker** — The "Pick Folder" button now supports opening folders directly from devices connected via USB cable, such as smartphones and cameras (previously restricted to local drives).
 
-\- Skip counter bug — photos that were skipped and later decided (keep/delete) are no longer double-counted in the "Skipped" counter
+### Fixed
+- **Skip Counter Bug** — Photos that were skipped and later decided (keep/delete) are no longer double-counted in the "Skipped" metric.
+- **Summary Count Bug** — Fixed an issue where the total photo count in the summary exceeded the actual number of loaded photos (e.g., 100 photos displaying as 102).
 
-\- Total photo count in summary no longer exceeds the actual number of photos (e.g. 100 photos showing as 102)
+### Internal
+- Added `toSkip` set in `AppState` for accurate skip tracking and state management.
+- Refactored folder picker, migrating from the `file_picker` package to the native Windows Shell API (`IFileOpenDialog`).
 
+## [0.1.0] - 2026-03-10
 
-
-\### Added
-
-\- MTP folder picker — the "Pick Folder" button now supports opening folders from phones connected via USB cable (previously only local drives were shown)
-
-
-
-\### Internal
-
-\- Added `toSkip` set in `AppState` for accurate skip tracking
-
-\- Refactored folder picker from `file\_picker` package to Windows Shell API (`IFileOpenDialog`)
-
-
-
-\## \[0.1.0] - 2026-03-10
-
-
-
-\### Added
-
-\- Initial release
-
-\- Flat mode — review all photos one by one with keep/delete/skip/undo
-
-\- Group mode — photos grouped by date (year → month → week)
-
-\- Sort options — by name, size, or date
-
-\- Session persistence — resume progress after closing the app
-
-\- Files moved to Recycle Bin (not permanently deleted)
-
-\- Dark luxury UI (Obsidian + Amber)
-
+### Added
+- Initial release.
+- **Flat Mode** — Review all photos sequentially with keep, delete, skip, and undo actions.
+- **Group Mode** — View and manage photos grouped hierarchically by date (year → month → week).
+- **Sort Options** — Sort galleries by name, size, or date.
+- **Session Persistence** — Automatically saves state to resume progress after closing the app.
+- **Safety First** — Files are moved to the system Recycle Bin rather than permanently deleted.
+- **Dark Luxury UI** — Custom Obsidian & Amber color scheme for a premium viewing experience.

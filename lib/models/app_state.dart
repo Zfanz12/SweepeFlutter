@@ -471,25 +471,125 @@ class AppState extends ChangeNotifier {
   }
 
   // ── Delete files ──────────────────────────────────
-  Future<int> deleteFiles(List<String> paths) async {
-    int count = 0;
-    for (final path in paths) {
-      try {
-        final file = File(path);
-        if (await file.exists()) {
-          // Move to recycle bin via shell on Windows
-          await Process.run('powershell', [
-            '-Command',
-            r"Add-Type -AssemblyName Microsoft.VisualBasic; "
-                r"[Microsoft.VisualBasic.FileIO.FileSystem]::DeleteFile("
-                "'$path'"
-                r", 'OnlyErrorDialogs', 'SendToRecycleBin')"
-          ]);
-          count++;
+  // Strategi: 4 parallel PowerShell workers, masing-masing proses chunk-nya.
+  // Pakai SHFileOperationW (Shell32 P/Invoke) via inline C# — ini API yang
+  // sama dengan Windows Explorer, flag FOF_NOCONFIRMATION | FOF_SILENT |
+  // FOF_ALLOWUNDO → silent recycle bin, zero dialog.
+  // Setiap worker print "OK" per file ke stdout → live progress counter.
+  //
+  // [onProgress] dipanggil (done, total) per file yang selesai.
+  Future<int> deleteFiles(
+    List<String> paths, {
+    void Function(int done, int total)? onProgress,
+  }) async {
+    if (paths.isEmpty) return 0;
+
+    final total = paths.length;
+
+    // Inline C# pakai SHFileOperationW dengan flag silent + allow-undo (recycle)
+    const psScript = r'''
+param([string]$listFile)
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+public class Recycle {
+  [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
+  public struct SHFILEOPSTRUCT {
+    public IntPtr hwnd;
+    public uint wFunc;
+    [MarshalAs(UnmanagedType.LPWStr)] public string pFrom;
+    [MarshalAs(UnmanagedType.LPWStr)] public string pTo;
+    public ushort fFlags;
+    public bool fAnyOperationsAborted;
+    public IntPtr hNameMappings;
+    [MarshalAs(UnmanagedType.LPWStr)] public string lpszProgressTitle;
+  }
+  [DllImport("shell32.dll", CharSet = CharSet.Unicode)]
+  public static extern int SHFileOperation(ref SHFILEOPSTRUCT lpFileOp);
+  public static int MoveToRecycleBin(string path) {
+    var op = new SHFILEOPSTRUCT();
+    op.wFunc  = 0x0003; // FO_DELETE
+    op.pFrom  = path + "\0\0";
+    op.fFlags = 0x0054; // FOF_NOCONFIRMATION(0x10) | FOF_SILENT(0x04) | FOF_ALLOWUNDO(0x40)
+    return SHFileOperation(ref op);
+  }
+}
+"@ -Language CSharp 2>$null
+
+Get-Content $listFile -Encoding UTF8 | ForEach-Object {
+  $f = $_.Trim()
+  if ($f -ne '' -and (Test-Path -LiteralPath $f)) {
+    $r = [Recycle]::MoveToRecycleBin($f)
+    if ($r -eq 0) { Write-Output "OK" } else { Write-Output "ERR:$r" }
+  } else {
+    Write-Output "SKIP"
+  }
+}
+''';
+
+    // 10 workers fixed — sweet spot untuk I/O-bound recycle bin operation
+    final workerCount = total < 10 ? total : 10;
+    final tmpDir = Directory.systemTemp.createTempSync('sweepe_');
+
+    try {
+      // Tulis PS1 script sekali, semua worker share file yang sama
+      final ps1File = File(p.join(tmpDir.path, 'recycle.ps1'));
+      ps1File.writeAsStringSync(psScript);
+
+      // Bagi paths ke N chunk merata
+      final chunkSize = (paths.length / workerCount).ceil();
+      final chunks = <List<String>>[];
+      for (int i = 0; i < paths.length; i += chunkSize) {
+        chunks.add(paths.sublist(i, (i + chunkSize).clamp(0, paths.length)));
+      }
+
+      // Shared counter — aman karena Dart event loop single-threaded
+      int done = 0;
+
+      // Launch semua worker bersamaan
+      final futures = chunks.asMap().entries.map((entry) async {
+        final idx   = entry.key;
+        final chunk = entry.value;
+
+        final listFile = File(p.join(tmpDir.path, 'files_$idx.txt'));
+        listFile.writeAsStringSync(chunk.join('\n'), encoding: utf8);
+
+        final proc = await Process.start('powershell', [
+          '-NoProfile', '-NonInteractive',
+          '-ExecutionPolicy', 'Bypass',
+          '-File', ps1File.path,
+          listFile.path,
+        ]);
+
+        // Baca stdout live per baris
+        await for (final line in proc.stdout
+            .transform(const SystemEncoding().decoder)
+            .transform(const LineSplitter())) {
+          final t = line.trim();
+          if (t == 'OK' || t.startsWith('ERR') || t == 'SKIP') {
+            if (t == 'OK') done++;
+            onProgress?.call(done, total);
+          }
         }
-      } catch (_) {}
+
+        await proc.exitCode;
+      });
+
+      await Future.wait(futures);
+
+      // Hitung aktual file yang sudah tidak ada di disk
+      int count = 0;
+      for (final path in paths) {
+        if (!File(path).existsSync()) count++;
+      }
+
+      return _cleanupAfterDelete(paths, count);
+    } finally {
+      try { tmpDir.deleteSync(recursive: true); } catch (_) {}
     }
-    // Clean up state after deletion
+  }
+
+  int _cleanupAfterDelete(List<String> paths, int count) {
     final deleted = paths.toSet();
     images.removeWhere((p) => deleted.contains(p));
     toDelete.removeWhere((p) => deleted.contains(p));
@@ -503,7 +603,6 @@ class AppState extends ChangeNotifier {
       dateGroups[k]!.removeWhere((p) => deleted.contains(p));
       if (dateGroups[k]!.isEmpty) dateGroups.remove(k);
     }
-    // Mark affected week keys as executed
     if (groupMode && currentGroupKey != null) {
       executedKeys.addAll(_weekKeysFor(currentGroupKey!));
     }

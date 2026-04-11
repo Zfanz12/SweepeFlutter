@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
@@ -70,7 +71,13 @@ class _GlobalSummaryScreenState extends State<GlobalSummaryScreen> {
             SweepButton(
               label: _deleting ? 'Menghapus...' : 'Hapus semua sekarang',
               bg: kRose, hover: kRoseHov, textColor: kText, height: 42, width: 220,
-              onPressed: _deleting ? null : () => _doDeleteAll(context, state),
+              onPressed: _deleting ? null : () async {
+                final confirm = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => _ConfirmDeleteDialog(count: nDel),
+                );
+                if (confirm == true && context.mounted) _doDeleteAll(context, state);
+              },
             ),
           ]),
           if (nSkip > 0) ...[
@@ -87,8 +94,22 @@ class _GlobalSummaryScreenState extends State<GlobalSummaryScreen> {
   Future<void> _doDeleteAll(BuildContext context, AppState state) async {
     setState(() => _deleting = true);
     final allDel = state.allDeleteList;
-    final count = await state.deleteFiles(List.from(allDel));
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (_) => _DeletingDialog(total: allDel.length),
+    );
+
+    final count = await state.deleteFiles(
+      List.from(allDel),
+      onProgress: (done, total) {
+        if (context.mounted) _DeletingDialog.update(done, total);
+      },
+    );
     if (!mounted) return;
+
+    Navigator.of(context, rootNavigator: true).pop();
 
     final nRev = state.reviewedAll;
     final allTot = state.totalAll;
@@ -116,6 +137,153 @@ class _GlobalSummaryScreenState extends State<GlobalSummaryScreen> {
     int t = 0;
     for (final p in paths) { try { t += File(p).lengthSync(); } catch (_) {} }
     return t;
+  }
+}
+
+// ── Confirm delete dialog ─────────────────────────
+class _ConfirmDeleteDialog extends StatelessWidget {
+  final int count;
+  const _ConfirmDeleteDialog({required this.count});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: kBgNav,
+      shape: const RoundedRectangleBorder(),
+      child: SizedBox(width: 420, height: 220, child: Column(children: [
+        Container(height: 2, color: kRose),
+        const SizedBox(height: 30),
+        const Text('Konfirmasi Hapus',
+            style: TextStyle(fontFamily: 'Courier New', fontSize: 17,
+                fontWeight: FontWeight.bold, color: kText)),
+        const SizedBox(height: 14),
+        Text('$count foto akan dipindahkan ke Recycle Bin.',
+            style: const TextStyle(fontFamily: 'Consolas', fontSize: 12, color: kTextDim)),
+        const SizedBox(height: 4),
+        const Text('Tindakan ini tidak dapat di-undo dari aplikasi.',
+            style: TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kTextMuted)),
+        const SizedBox(height: 28),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          SweepButton(label: 'Batal', height: 40, width: 110,
+              onPressed: () => Navigator.pop(context, false)),
+          const SizedBox(width: 12),
+          SweepButton(label: 'Ya, hapus sekarang',
+              bg: kRose, hover: kRoseHov, textColor: kText,
+              height: 40, width: 180,
+              onPressed: () => Navigator.pop(context, true)),
+        ]),
+      ])),
+    );
+  }
+}
+
+// ── Deleting progress dialog ──────────────────────
+class _DeletingDialog extends StatefulWidget {
+  final int total;
+  const _DeletingDialog({required this.total});
+
+  static final _notifier = ValueNotifier<(int, int)>((0, 0));
+  static void update(int done, int total) => _notifier.value = (done, total);
+
+  @override
+  State<_DeletingDialog> createState() => _DeletingDialogState();
+}
+
+class _DeletingDialogState extends State<_DeletingDialog>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+  late final Stopwatch _stopwatch;
+  late final Timer _ticker;
+  int _elapsed = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(vsync: this, duration: const Duration(milliseconds: 900))
+      ..repeat(reverse: true);
+    _stopwatch = Stopwatch()..start();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _elapsed = _stopwatch.elapsed.inSeconds);
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    _ticker.cancel();
+    _stopwatch.stop();
+    super.dispose();
+  }
+
+  String get _elapsedLabel {
+    final m = _elapsed ~/ 60;
+    final s = _elapsed % 60;
+    if (m > 0) return '${m}m ${s.toString().padLeft(2, '0')}s berlalu';
+    return '${s}s berlalu';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      backgroundColor: kBgNav,
+      shape: const RoundedRectangleBorder(),
+      child: SizedBox(width: 420, height: 230, child: Column(children: [
+        Container(height: 2, color: kRose),
+        const SizedBox(height: 24),
+        FadeTransition(
+          opacity: Tween(begin: 0.45, end: 1.0).animate(_pulse),
+          child: const Text('Menghapus...',
+              style: TextStyle(fontFamily: 'Courier New', fontSize: 17,
+                  fontWeight: FontWeight.bold, color: kRose)),
+        ),
+        const SizedBox(height: 20),
+        ValueListenableBuilder<(int, int)>(
+          valueListenable: _DeletingDialog._notifier,
+          builder: (_, val, __) {
+            final done  = val.$1;
+            final total = val.$2 == 0 ? widget.total : val.$2;
+            final target = total > 0 ? done / total : 0.0;
+            return Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 32),
+              child: Column(children: [
+                TweenAnimationBuilder<double>(
+                  tween: Tween(end: target),
+                  duration: const Duration(milliseconds: 350),
+                  curve: Curves.easeOut,
+                  builder: (_, v, __) => ClipRRect(
+                    borderRadius: BorderRadius.circular(4),
+                    child: Stack(children: [
+                      Container(height: 8, color: kBorder),
+                      FractionallySizedBox(
+                        widthFactor: v,
+                        child: Container(
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            gradient: LinearGradient(colors: [kRose, kRoseHov]),
+                          ),
+                        ),
+                      ),
+                    ]),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+                  Text('$done foto dihapus',
+                      style: const TextStyle(fontFamily: 'Consolas',
+                          fontSize: 11, color: kTextMuted)),
+                  Text('$total total',
+                      style: const TextStyle(fontFamily: 'Consolas',
+                          fontSize: 11, color: kTextMuted)),
+                ]),
+              ]),
+            );
+          },
+        ),
+        const SizedBox(height: 14),
+        Text(_elapsedLabel,
+            style: const TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kAmberDim)),
+      ])),
+    );
   }
 }
 
