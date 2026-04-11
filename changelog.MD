@@ -40,5 +40,5 @@ All notable changes to Sweepe will be documented in this file.
 ## [0.1.0] - 2026-03-10
 
 ### Added
-- **Initial Port release - Ported the barebone features and core logic from the original Python prototype.
-- ** Codebase Migration - Completely rewritten from the legacy Python script, establishing the new foundational architecture. 
+- **Initial Port release** - Ported the barebone features and core logic from the original Python prototype.
+- **Codebase Migration** - Completely rewritten from the legacy Python script, establishing the new foundational architecture. 
