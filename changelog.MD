@@ -20,7 +20,7 @@ All notable changes to Sweepe will be documented in this file.
 - **Arrows Mark** — Added directional arrow overlays to the "current picture" carousel to improve navigational UX.
 
 ### Changed
-- **Color-Coded Progress Bar** — Upgraded the global progress bar to visually represent actions using color codes (e.g., blue for kept photos, orange for deleted photos) proportionate to the total count.
+- **Color-Coded Progress Bar** — Upgraded the global progress bar to visually represent actions using color codes (blue for kept photos, red for deleted photos) proportionate to the total count.
 
 ### Fixed
 - **State Inconsistency Bug** — Fixed a complex bug where photos initially marked as "skip" and later flagged as "keep/delete" still falsely incremented the skipped counter, causing downstream logic errors.
