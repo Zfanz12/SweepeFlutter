@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:window_manager/window_manager.dart';
@@ -302,6 +303,22 @@ class _WeekRow extends StatelessWidget {
     final pct = wkTot > 0 ? wkRev / wkTot : 0.0;
     final moName = AppState.monthName(month);
 
+    // Compute date range from file modified dates
+    String dateRange = '';
+    try {
+      final dates = paths.map((p) => File(p).lastModifiedSync()).toList();
+      if (dates.isNotEmpty) {
+        dates.sort();
+        final first = dates.first;
+        final last = dates.last;
+        if (first.day == last.day) {
+          dateRange = '${first.day} $moName';
+        } else {
+          dateRange = '${first.day} – ${last.day} $moName';
+        }
+      }
+    } catch (_) {}
+
     return Container(
       height: 56,
       margin: const EdgeInsets.only(left: 52, bottom: 3),
@@ -316,6 +333,11 @@ class _WeekRow extends StatelessWidget {
           const SizedBox(width: 10),
           Text('Week $week', style: TextStyle(fontFamily: 'Consolas', fontSize: 13,
               fontWeight: FontWeight.bold, color: wkDone ? kTeal : kTextDim)),
+          if (dateRange.isNotEmpty) ...[
+            const SizedBox(width: 8),
+            Text(dateRange, style: TextStyle(fontFamily: 'Consolas', fontSize: 11,
+                color: wkDone ? kTeal.withAlpha(180) : kTextMuted)),
+          ],
           const SizedBox(width: 8),
           Text('$wkRev / $wkTot', style: TextStyle(fontFamily: 'Consolas',
               fontSize: 12, color: wkDone ? kTeal : kTextMuted)),

@@ -10,7 +10,6 @@ dependencies:
   flutter:
     sdk: flutter
   provider: ^6.1.2
-  file_picker: ^8.1.4
   shared_preferences: ^2.3.3
   path: ^1.9.0
   window_manager: ^0.4.3
