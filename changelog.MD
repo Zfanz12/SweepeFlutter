@@ -5,7 +5,6 @@ All notable changes to Sweepe will be documented in this file.
 ## [0.2.0] - 2026-04-11
 
 ### Added
-- **Batch Deletion Engine** — Reworked the "move to Recycle Bin" operation to process files in bulk rather than one by one, significantly improving execution speed.
 - **Deletion Progress Dialog** — Added a pop-up loading dialog ("Deleting...") during file removal, featuring a progress bar and time elapsed indicator to provide clear feedback during large batch operations.
 - **Confirmation Dialog** — Added a safety prompt requiring user confirmation before executing the deletion process.
 - **Date Range Labels** — Added clear start and end date labels within the Weekly Group mode for easier chronological navigation.
@@ -17,6 +16,9 @@ All notable changes to Sweepe will be documented in this file.
 
 ### Fixed
 - **State Inconsistency Bug** — Fixed a complex bug where photos initially marked as "skip" and later flagged as "keep/delete" still falsely incremented the skipped counter, causing downstream logic errors.
+
+### Internal
+- **Batch Deletion Engine** — Reworked the "move to Recycle Bin" operation to process files in bulk rather than one by one, significantly improving execution speed.
 
 ## [0.1.1] - 2026-04-01
 
