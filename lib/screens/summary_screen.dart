@@ -30,7 +30,7 @@ class _SummaryScreenState extends State<SummaryScreen> {
     final nDel = state.toDelete.length;
     final nKeep = state.toKeep.length;
     final nRev = nDel + nKeep;
-    final nSkip = state.images.length - nRev;
+    final nSkip = state.toSkip.length;
     final tb = _totalBytes(state.toDelete);
     final ts = AppState.formatSize(tb);
 

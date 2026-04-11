@@ -54,6 +54,7 @@ class AppState extends ChangeNotifier {
   int index = 0;
   List<String> toDelete = [];
   List<String> toKeep = [];
+  Set<String> toSkip = {};   // foto yang di-skip tapi belum di-decide
   String? currentFolder;
   String lastSortMode = 'name_asc';
 
@@ -126,6 +127,7 @@ class AppState extends ChangeNotifier {
     index = 0;
     toDelete = [];
     toKeep = [];
+    toSkip = {};
     groupMode = false;
     notifyListeners();
   }
@@ -134,6 +136,7 @@ class AppState extends ChangeNotifier {
     if (index >= images.length) return;
     final path = images[index];
     toKeep.remove(path);
+    toSkip.remove(path);   // tidak lagi skipped
     if (!toDelete.contains(path)) toDelete.add(path);
     index++;
     notifyListeners();
@@ -143,6 +146,7 @@ class AppState extends ChangeNotifier {
     if (index >= images.length) return;
     final path = images[index];
     toDelete.remove(path);
+    toSkip.remove(path);   // tidak lagi skipped
     if (!toKeep.contains(path)) toKeep.add(path);
     index++;
     notifyListeners();
@@ -154,6 +158,7 @@ class AppState extends ChangeNotifier {
     final path = images[index];
     toDelete.remove(path);
     toKeep.remove(path);
+    toSkip.remove(path);
     notifyListeners();
   }
 
@@ -162,6 +167,7 @@ class AppState extends ChangeNotifier {
     final path = images[index];
     toDelete.remove(path);
     toKeep.remove(path);
+    toSkip.add(path);      // track sebagai skipped
     index++;
     notifyListeners();
   }
@@ -442,6 +448,7 @@ class AppState extends ChangeNotifier {
     images.removeWhere((p) => deleted.contains(p));
     toDelete.removeWhere((p) => deleted.contains(p));
     toKeep.removeWhere((p) => deleted.contains(p));
+    toSkip.removeWhere((p) => deleted.contains(p));
     for (final k in groupProgress.keys) {
       groupProgress[k]!.delete.removeWhere((p) => deleted.contains(p));
       groupProgress[k]!.keep.removeWhere((p) => deleted.contains(p));
@@ -487,6 +494,7 @@ class AppState extends ChangeNotifier {
         'resume_index': resumeIndex,
         'to_delete': toDelete,
         'to_keep': toKeep,
+        'to_skip': toSkip.toList(),
       };
       await prefs.setString(_kSessionKey, jsonEncode(data));
       resumeSession = data;
@@ -525,6 +533,7 @@ class AppState extends ChangeNotifier {
       'resume_index': data['resume_index'] ?? 0,
       'to_delete': List<String>.from(data['to_delete'] ?? []),
       'to_keep': List<String>.from(data['to_keep'] ?? []),
+      'to_skip': List<String>.from(data['to_skip'] ?? []),
     };
   }
 
@@ -584,6 +593,9 @@ class AppState extends ChangeNotifier {
     toKeep = List<String>.from(s['to_keep'] ?? [])
         .where(existing.contains)
         .toList();
+    toSkip = List<String>.from(s['to_skip'] ?? [])
+        .where(existing.contains)
+        .toSet();
     index = s['resume_index'] ?? 0;
     if (index >= images.length) index = images.length - 1;
     groupMode = false;

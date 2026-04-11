@@ -33,8 +33,7 @@ class _GroupSummaryScreenState extends State<GroupSummaryScreen> {
     final nDel = state.toDelete.length;
     final nKeep = state.toKeep.length;
     final nRev = nDel + nKeep;
-    final decided = {...state.toDelete, ...state.toKeep};
-    final nSkip = state.images.where((p) => !decided.contains(p)).length;
+    final nSkip = state.toSkip.length;
     final tb = _totalBytes(state.toDelete);
     final ts = AppState.formatSize(tb);
 
