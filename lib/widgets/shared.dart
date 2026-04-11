@@ -213,40 +213,178 @@ class _SweepButtonState extends State<SweepButton> {
   }
 }
 
-// ── Delete list card ──────────────────────────────
-class DeleteListCard extends StatelessWidget {
+// ── Delete list card (grouped by month) ──────────
+class DeleteListCard extends StatefulWidget {
   final List<String> files;
   final double height;
   const DeleteListCard({super.key, required this.files, this.height = 220});
 
   @override
+  State<DeleteListCard> createState() => _DeleteListCardState();
+}
+
+class _DeleteListCardState extends State<DeleteListCard> {
+  // collapsed groups — key = "yyyy-mm"
+  final Set<String> _collapsed = {};
+
+  static const _months = ['', 'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                           'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  // Returns ordered list of (groupKey, label, paths, totalBytes)
+  List<({String key, String label, List<String> paths, int totalBytes})> _buildGroups() {
+    final map = <String, List<String>>{};
+    for (final path in widget.files) {
+      String gKey;
+      try {
+        final dt = File(path).lastModifiedSync();
+        gKey = '${dt.year}-${dt.month.toString().padLeft(2, '0')}';
+      } catch (_) {
+        gKey = '0000-00';
+      }
+      map.putIfAbsent(gKey, () => []).add(path);
+    }
+    final sorted = map.keys.toList()..sort((a, b) => b.compareTo(a));
+    return sorted.map((k) {
+      String label;
+      if (k == '0000-00') {
+        label = 'Tanggal tidak diketahui';
+      } else {
+        final parts = k.split('-');
+        final mo = int.tryParse(parts[1]) ?? 0;
+        label = '${_months[mo]}  ${parts[0]}';
+      }
+      final paths = map[k]!;
+      int tb = 0;
+      for (final p in paths) { try { tb += File(p).lengthSync(); } catch (_) {} }
+      return (key: k, label: label, paths: paths, totalBytes: tb);
+    }).toList();
+  }
+
+  static String _fmtSize(int bytes) {
+    final kb = bytes / 1024;
+    if (kb < 1024) return '${kb.toStringAsFixed(0)} KB';
+    final mb = kb / 1024;
+    if (mb < 1024) return '${mb.toStringAsFixed(1)} MB';
+    return '${(mb / 1024).toStringAsFixed(2)} GB';
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final groups = _buildGroups();
+
     return Container(
-      height: height,
-      decoration: BoxDecoration(color: kBgCard, borderRadius: BorderRadius.circular(12), border: Border.all(color: kBorder)),
+      height: widget.height,
+      decoration: BoxDecoration(
+          color: kBgCard,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: kBorder)),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+        // Header
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 14, 16, 6),
           child: Row(children: [
-            const Text('Files yang akan dihapus', style: TextStyle(fontFamily: 'Courier New', fontSize: 11, fontWeight: FontWeight.bold, color: kRose)),
+            const Text('Files yang akan dihapus',
+                style: TextStyle(fontFamily: 'Courier New', fontSize: 11,
+                    fontWeight: FontWeight.bold, color: kRose)),
             const SizedBox(width: 6),
-            Text('${files.length}', style: const TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kTextMuted)),
+            Text('${widget.files.length}',
+                style: const TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kTextMuted)),
           ]),
         ),
+        // List
         Expanded(
-          child: files.isEmpty
-              ? const Center(child: Text('Tidak ada foto yang ditandai untuk dihapus.', style: TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kTextMuted)))
+          child: widget.files.isEmpty
+              ? const Center(
+                  child: Text('Tidak ada foto yang ditandai untuk dihapus.',
+                      style: TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kTextMuted)))
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(8, 0, 8, 10),
-                  itemCount: files.length,
-                  itemBuilder: (_, i) => _FileRow(path: files[i]),
+                  itemCount: _itemCount(groups),
+                  itemBuilder: (_, i) => _buildItem(i, groups),
                 ),
         ),
       ]),
     );
   }
+
+  int _itemCount(List<({String key, String label, List<String> paths, int totalBytes})> groups) {
+    int count = 0;
+    for (final g in groups) {
+      count++; // header row
+      if (!_collapsed.contains(g.key)) count += g.paths.length;
+    }
+    return count;
+  }
+
+  Widget _buildItem(int index, List<({String key, String label, List<String> paths, int totalBytes})> groups) {
+    int cursor = 0;
+    for (final g in groups) {
+      if (index == cursor) return _GroupHeader(
+        label: g.label,
+        count: g.paths.length,
+        sizeLabel: _fmtSize(g.totalBytes),
+        collapsed: _collapsed.contains(g.key),
+        onTap: () => setState(() {
+          if (_collapsed.contains(g.key)) _collapsed.remove(g.key);
+          else _collapsed.add(g.key);
+        }),
+      );
+      cursor++;
+      if (!_collapsed.contains(g.key)) {
+        if (index < cursor + g.paths.length) {
+          return _FileRow(path: g.paths[index - cursor]);
+        }
+        cursor += g.paths.length;
+      }
+    }
+    return const SizedBox.shrink();
+  }
 }
 
+// ── Group header row ──────────────────────────────
+class _GroupHeader extends StatelessWidget {
+  final String label;
+  final int count;
+  final String sizeLabel;
+  final bool collapsed;
+  final VoidCallback onTap;
+  const _GroupHeader({required this.label, required this.count,
+      required this.sizeLabel, required this.collapsed, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        height: 26,
+        margin: const EdgeInsets.only(top: 4, bottom: 2),
+        decoration: BoxDecoration(
+          color: kBgDeep,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Row(children: [
+          const SizedBox(width: 8),
+          Icon(
+            collapsed ? Icons.keyboard_arrow_right_rounded : Icons.keyboard_arrow_down_rounded,
+            size: 14, color: kAmberDim,
+          ),
+          const SizedBox(width: 4),
+          Text(label, style: const TextStyle(fontFamily: 'Consolas', fontSize: 11,
+              fontWeight: FontWeight.bold, color: kAmber)),
+          const SizedBox(width: 6),
+          Text('$count foto', style: const TextStyle(fontFamily: 'Consolas',
+              fontSize: 10, color: kTextMuted)),
+          const Spacer(),
+          Text(sizeLabel, style: const TextStyle(fontFamily: 'Consolas',
+              fontSize: 10, color: kTeal)),
+          const SizedBox(width: 10),
+        ]),
+      ),
+    );
+  }
+}
+
+// ── File row ──────────────────────────────────────
 class _FileRow extends StatelessWidget {
   final String path;
   const _FileRow({required this.path});
@@ -263,12 +401,16 @@ class _FileRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 1),
       child: Row(children: [
-        const SizedBox(width: 4),
+        const SizedBox(width: 20),
         const Text('—', style: TextStyle(fontFamily: 'Consolas', fontSize: 9, color: kRose)),
         const SizedBox(width: 6),
-        Expanded(child: Text(name, style: const TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kTextDim), overflow: TextOverflow.ellipsis)),
+        Expanded(child: Text(name,
+            style: const TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kTextDim),
+            overflow: TextOverflow.ellipsis)),
         const SizedBox(width: 8),
-        SizedBox(width: 60, child: Text(size, style: const TextStyle(fontFamily: 'Consolas', fontSize: 9, color: kTextMuted), textAlign: TextAlign.right)),
+        SizedBox(width: 60, child: Text(size,
+            style: const TextStyle(fontFamily: 'Consolas', fontSize: 9, color: kTextMuted),
+            textAlign: TextAlign.right)),
       ]),
     );
   }

@@ -46,7 +46,7 @@ class DateBrowserScreen extends StatelessWidget {
                   style: const TextStyle(fontFamily: 'Consolas', fontSize: 12, color: kRose)),
             ]),
             const SizedBox(height: 5),
-            _ProgressBar(value: globalPct, color: kAmber, height: 4),
+            _ProgressBar(total: tot, nKeep: state.keptAll, nDelete: state.deletedAll, height: 4),
           ]),
         ),
         const SizedBox(height: 12),
@@ -120,27 +120,38 @@ class _BackConfirmDialog extends StatelessWidget {
   }
 }
 
-// ── Tiny progress bar ─────────────────────────────
+// ── Tri-color progress bar ────────────────────────
 class _ProgressBar extends StatelessWidget {
-  final double value;
-  final Color color;
+  final int total, nKeep, nDelete;
   final double height;
-  const _ProgressBar({required this.value, this.color = kAmber, this.height = 3});
+  const _ProgressBar({
+    required this.total,
+    required this.nKeep,
+    required this.nDelete,
+    this.height = 3,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(builder: (_, c) => ClipRRect(
-      borderRadius: BorderRadius.circular(height),
-      child: SizedBox(height: height, width: c.maxWidth,
-        child: Stack(children: [
-          Container(color: kBgCard),
-          FractionallySizedBox(
-            widthFactor: value.clamp(0.0, 1.0),
-            child: Container(color: color),
-          ),
-        ]),
-      ),
-    ));
+    if (total == 0) return SizedBox(height: height);
+    return LayoutBuilder(builder: (_, c) {
+      final w = c.maxWidth;
+      final keepW   = (nKeep   / total * w).clamp(0.0, w);
+      final deleteW = (nDelete / total * w).clamp(0.0, w - keepW);
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(height),
+        child: SizedBox(height: height, width: w,
+          child: Stack(children: [
+            Container(color: kBgCard),
+            Container(width: keepW, color: kTeal),
+            Positioned(
+              left: keepW,
+              child: Container(width: deleteW, height: height, color: kRose),
+            ),
+          ]),
+        ),
+      );
+    });
   }
 }
 
@@ -155,6 +166,7 @@ class _YearRow extends StatelessWidget {
     final yrPaths = state.pathsForYear(year);
     final (yrRev, yrTot) = state.progressFor(yrPaths);
     final yrDone = yrRev >= yrTot && yrTot > 0;
+    final yrExecuted = state.isYearExecuted(year);
     final expanded = state.isYearExpanded(year);
     final moMap = state.yearMap[year] ?? {};
     final pct = yrTot > 0 ? yrRev / yrTot : 0.0;
@@ -171,10 +183,17 @@ class _YearRow extends StatelessWidget {
                 onTap: () => state.toggleYear(year)),
             const SizedBox(width: 10),
             Text('$year', style: TextStyle(fontFamily: 'Courier New', fontSize: 18,
-                fontWeight: FontWeight.bold, color: yrDone ? kTeal : kText)),
-            const SizedBox(width: 12),
+                fontWeight: FontWeight.bold,
+                color: yrExecuted ? kTextMuted : (yrDone ? kTeal : kText),
+                decoration: yrExecuted ? TextDecoration.lineThrough : null,
+                decorationColor: kTextMuted)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 10),
+              child: Text('|', style: TextStyle(fontFamily: 'Consolas', fontSize: 14,
+                  color: yrExecuted ? kTextMuted.withAlpha(80) : kBorderLt)),
+            ),
             Text('$yrRev / $yrTot', style: TextStyle(fontFamily: 'Consolas',
-                fontSize: 13, color: yrDone ? kTeal : kTextMuted)),
+                fontSize: 13, color: yrExecuted ? kTextMuted : (yrDone ? kTeal : kTextMuted))),
             const Spacer(),
             _IBtn(
               icon: Icons.play_arrow_rounded,
@@ -203,7 +222,7 @@ class _YearRow extends StatelessWidget {
           ])),
           Padding(
             padding: const EdgeInsets.only(left: 12, right: 10, bottom: 5),
-            child: _ProgressBar(value: pct, color: yrDone ? kTeal : kAmber, height: 3),
+            child: _ProgressBar(total: yrTot, nKeep: state.keepCountFor(yrPaths), nDelete: state.deleteCountFor(yrPaths), height: 3),
           ),
         ]),
       ),
@@ -228,6 +247,7 @@ class _MonthRow extends StatelessWidget {
     final moPaths = state.pathsForMonth(year, month);
     final (moRev, moTot) = state.progressFor(moPaths);
     final moDone = moRev >= moTot && moTot > 0;
+    final moExecuted = state.isMonthExecuted(year, month);
     final expanded = state.isMonthExpanded(year, month);
     final moName = AppState.monthName(month);
     final wkMap = state.yearMap[year]?[month] ?? {};
@@ -245,10 +265,17 @@ class _MonthRow extends StatelessWidget {
                 onTap: () => state.toggleMonth(year, month)),
             const SizedBox(width: 8),
             Text(moName, style: TextStyle(fontFamily: 'Courier New', fontSize: 15,
-                fontWeight: FontWeight.bold, color: moDone ? kTeal : kText)),
-            const SizedBox(width: 8),
+                fontWeight: FontWeight.bold,
+                color: moExecuted ? kTextMuted : (moDone ? kTeal : kText),
+                decoration: moExecuted ? TextDecoration.lineThrough : null,
+                decorationColor: kTextMuted)),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text('|', style: TextStyle(fontFamily: 'Consolas', fontSize: 13,
+                  color: moExecuted ? kTextMuted.withAlpha(80) : kBorderLt)),
+            ),
             Text('$moRev / $moTot', style: TextStyle(fontFamily: 'Consolas',
-                fontSize: 12, color: moDone ? kTeal : kTextMuted)),
+                fontSize: 12, color: moExecuted ? kTextMuted : (moDone ? kTeal : kTextMuted))),
             const Spacer(),
             _IBtn(
               icon: Icons.play_arrow_rounded,
@@ -275,7 +302,7 @@ class _MonthRow extends StatelessWidget {
           ])),
           Padding(
             padding: const EdgeInsets.only(left: 10, right: 8, bottom: 4),
-            child: _ProgressBar(value: pct, color: moDone ? kTeal : kAmberGlow, height: 2),
+            child: _ProgressBar(total: moTot, nKeep: state.keepCountFor(moPaths), nDelete: state.deleteCountFor(moPaths), height: 2),
           ),
         ]),
       ),
@@ -298,6 +325,7 @@ class _WeekRow extends StatelessWidget {
     final paths = state.dateGroups[key] ?? [];
     final (wkRev, wkTot) = state.progressFor(paths);
     final wkDone = wkRev >= wkTot && wkTot > 0;
+    final wkExecuted = state.isWeekExecuted(key);
     final gp = state.groupProgress[key];
     final nDel = gp?.delete.length ?? 0;
     final pct = wkTot > 0 ? wkRev / wkTot : 0.0;
@@ -332,15 +360,26 @@ class _WeekRow extends StatelessWidget {
           )),
           const SizedBox(width: 10),
           Text('Week $week', style: TextStyle(fontFamily: 'Consolas', fontSize: 13,
-              fontWeight: FontWeight.bold, color: wkDone ? kTeal : kTextDim)),
+              fontWeight: FontWeight.bold,
+              color: wkExecuted ? kTextMuted : (wkDone ? kTeal : kTextDim),
+              decoration: wkExecuted ? TextDecoration.lineThrough : null,
+              decorationColor: kTextMuted)),
           if (dateRange.isNotEmpty) ...[
-            const SizedBox(width: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text('|', style: TextStyle(fontFamily: 'Consolas', fontSize: 12,
+                  color: wkExecuted ? kTextMuted.withAlpha(80) : kBorderLt)),
+            ),
             Text(dateRange, style: TextStyle(fontFamily: 'Consolas', fontSize: 11,
-                color: wkDone ? kTeal.withAlpha(180) : kTextMuted)),
+                color: wkExecuted ? kTextMuted : (wkDone ? kTeal.withAlpha(180) : kTextMuted))),
           ],
-          const SizedBox(width: 8),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: Text('|', style: TextStyle(fontFamily: 'Consolas', fontSize: 12,
+                color: wkExecuted ? kTextMuted.withAlpha(80) : kBorderLt)),
+          ),
           Text('$wkRev / $wkTot', style: TextStyle(fontFamily: 'Consolas',
-              fontSize: 12, color: wkDone ? kTeal : kTextMuted)),
+              fontSize: 12, color: wkExecuted ? kTextMuted : (wkDone ? kTeal : kTextMuted))),
           if (nDel > 0) ...[
             const SizedBox(width: 8),
             Text('$nDel hapus', style: const TextStyle(fontFamily: 'Consolas',
@@ -371,7 +410,7 @@ class _WeekRow extends StatelessWidget {
         ])),
         Padding(
           padding: const EdgeInsets.only(left: 19, right: 8, bottom: 4),
-          child: _ProgressBar(value: pct, color: wkDone ? kTeal : kAmberDim, height: 2),
+          child: _ProgressBar(total: wkTot, nKeep: gp?.keep.length ?? 0, nDelete: nDel, height: 2),
         ),
       ]),
     );

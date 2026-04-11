@@ -65,6 +65,9 @@ class AppState extends ChangeNotifier {
   String groupSortMode = 'date_desc';
   GroupKey? currentGroupKey;
 
+  // ── Executed groups ──
+  Set<GroupKey> executedKeys = {};
+
   // ── Browser expand state ──
   Set<int> expandedYears = {};
   Set<String> expandedMonths = {}; // "year,month"
@@ -294,6 +297,7 @@ class AppState extends ChangeNotifier {
   void resetGroupKeys(List<GroupKey> keys) {
     for (final k in keys) {
       groupProgress.remove(k);
+      executedKeys.remove(k);
     }
     persistGroupSession();
     notifyListeners();
@@ -316,6 +320,21 @@ class AppState extends ChangeNotifier {
       }
     }
     notifyListeners();
+  }
+
+  // ── Executed helpers ──────────────────────────────
+  bool isWeekExecuted(GroupKey key) => executedKeys.contains(key);
+
+  bool isMonthExecuted(int yr, int mo) {
+    final wkMap = yearMap[yr]?[mo] ?? {};
+    if (wkMap.isEmpty) return false;
+    return wkMap.keys.every((wk) => executedKeys.contains(GroupKey(yr, mo, wk)));
+  }
+
+  bool isYearExecuted(int yr) {
+    final ym = yearMap[yr] ?? {};
+    if (ym.isEmpty) return false;
+    return ym.keys.every((mo) => isMonthExecuted(yr, mo));
   }
 
   // ── Progress helpers ──────────────────────────────
@@ -344,6 +363,32 @@ class AppState extends ChangeNotifier {
     final all = <String>{};
     for (final gp in groupProgress.values) {
       all.addAll(gp.delete);
+    }
+    return all.length;
+  }
+
+  int get keptAll {
+    final all = <String>{};
+    for (final gp in groupProgress.values) {
+      all.addAll(gp.keep);
+    }
+    return all.length;
+  }
+
+  int deleteCountFor(List<String> paths) {
+    final ps = paths.toSet();
+    final all = <String>{};
+    for (final gp in groupProgress.values) {
+      all.addAll(gp.delete.where((p) => ps.contains(p)));
+    }
+    return all.length;
+  }
+
+  int keepCountFor(List<String> paths) {
+    final ps = paths.toSet();
+    final all = <String>{};
+    for (final gp in groupProgress.values) {
+      all.addAll(gp.keep.where((p) => ps.contains(p)));
     }
     return all.length;
   }
@@ -413,6 +458,7 @@ class AppState extends ChangeNotifier {
     dateGroups = {};
     groupProgress = {};
     currentGroupKey = null;
+    executedKeys = {};
     expandedYears = {};
     expandedMonths = {};
     notifyListeners();
@@ -456,6 +502,10 @@ class AppState extends ChangeNotifier {
     for (final k in dateGroups.keys.toList()) {
       dateGroups[k]!.removeWhere((p) => deleted.contains(p));
       if (dateGroups[k]!.isEmpty) dateGroups.remove(k);
+    }
+    // Mark affected week keys as executed
+    if (groupMode && currentGroupKey != null) {
+      executedKeys.addAll(_weekKeysFor(currentGroupKey!));
     }
     notifyListeners();
     return count;

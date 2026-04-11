@@ -157,7 +157,7 @@ class _ViewerScreenState extends State<ViewerScreen> {
 
   Widget _buildCarousel(List<String> images, int idx, AppState state) {
     return Container(
-      height: 82,
+      height: 94,
       color: const Color(0xFF111116),
       child: ScrollbarTheme(
         data: ScrollbarThemeData(
@@ -191,21 +191,36 @@ class _ViewerScreenState extends State<ViewerScreen> {
                 final isKeep = state.toKeep.contains(images[i]);
                 return GestureDetector(
                   onTap: () { state.index = i; state.notifyListeners(); },
-                  child: Container(
-                    width: 68, height: 54,
-                    margin: const EdgeInsets.only(right: 4),
-                    decoration: BoxDecoration(
-                      border: Border.all(
-                        color: isCurrent ? kAmber : isDel ? kRose : isKeep ? kTeal : Colors.transparent,
-                        width: isCurrent ? 2 : 1,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      SizedBox(
+                        height: 12,
+                        width: 68,
+                        child: isCurrent
+                            ? const Center(
+                                child: Text('▼',
+                                    style: TextStyle(fontSize: 15, color: kAmber, height: 1)),
+                              )
+                            : const SizedBox.shrink(),
                       ),
-                    ),
-                    child: Stack(fit: StackFit.expand, children: [
-                      Image.file(File(images[i]), fit: BoxFit.cover, cacheWidth: 136,
-                          errorBuilder: (_, __, ___) => Container(color: kBgCard)),
-                      if (isDel) Container(color: kRose.withAlpha(80)),
-                      if (isKeep) Container(color: kTeal.withAlpha(60)),
-                    ]),
+                      Container(
+                        width: 68, height: 54,
+                        margin: const EdgeInsets.only(right: 4),
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                            color: isCurrent ? kAmber : isDel ? kRose : isKeep ? kTeal : Colors.transparent,
+                            width: isCurrent ? 2 : 1,
+                          ),
+                        ),
+                        child: Stack(fit: StackFit.expand, children: [
+                          Image.file(File(images[i]), fit: BoxFit.cover, cacheWidth: 136,
+                              errorBuilder: (_, __, ___) => Container(color: kBgCard)),
+                          if (isDel) Container(color: kRose.withAlpha(80)),
+                          if (isKeep) Container(color: kTeal.withAlpha(60)),
+                        ]),
+                      ),
+                    ],
                   ),
                 );
               },
