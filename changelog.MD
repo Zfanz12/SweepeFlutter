@@ -10,7 +10,7 @@ All notable changes to Sweepe will be documented in this file.
 - **Date Range Labels** — Added clear start and end date labels within the Weekly Group mode for easier chronological navigation.
 - **Grouped Summary** — The list of deleted photos in the Summary view is now grouped chronologically (by week/month) and includes collapsible sections for better readability.
 - **MTP Folder Picker** — The "Pick Folder" button now supports opening folders directly from devices connected via USB cable, such as smartphones and cameras (previously restricted to local drives).
-- **Navigation Arrows** — Added directional arrow overlays to the "current picture" carousel to improve navigational UX.
+- **Arrows Mark** — Added directional arrow overlays to the "current picture" carousel to improve navigational UX.
 
 ### Changed
 - **Color-Coded Progress Bar** — Upgraded the global progress bar to visually represent actions using color codes (e.g., blue for kept photos, orange for deleted photos) proportionate to the total count.
