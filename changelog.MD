@@ -4,11 +4,20 @@ All notable changes to Sweepe will be documented in this file.
 
 ## Upcoming Fixes & Features
 
-- **Execution Visual Cues** — Implementing a strikethrough effect on group titles (week, month, year) once a group has been 100% processed.
-- **Enhanced Progress Feedback** — Adding a "00:00:00" time-elapsed counter at the bottom of the deletion dialog for better process monitoring.
-- **UI Layout Fixes** — Fixing a layout bug where the bottom dialog width expands excessively, ensuring it stays contained and readable.
+
+
+
 
 # Releases
+## [0.2.1] 2026-04-13
+
+### Added
+- **Execution Visual Cues** — Implemented a strikethrough effect on group titles (week, month, year) once a group has been 100% processed.
+- **Enhanced Progress Feedback** — Adding a "00:00:00" time-elapsed counter at the bottom of the deletion dialog for better process monitoring.
+
+###Fixed
+- **UI Layout Fixes** — Fixing a layout bug where the bottom dialog width expands excessively, ensuring it stays contained and readable.
+
 ## [0.2.0] - 2026-04-11
 
 ### Added
