@@ -4,7 +4,8 @@ All notable changes to Sweepe will be documented in this file.
 
 ## Upcoming Fixes & Features
 
-
+- **Video Support** — Added compatibility for various video file formats, allowing users to review and organize videos alongside their photo.
+- **Integrated Video Player** — Implemented a built-in video player with essential playback controls (play, pause, seek, and volume) for seamless reviewing without requiring external applications.
 
 
 
