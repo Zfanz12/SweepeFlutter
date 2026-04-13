@@ -144,7 +144,7 @@ class _ConfirmDeleteDialog extends StatelessWidget {
     return Dialog(
       backgroundColor: kBgNav,
       shape: const RoundedRectangleBorder(),
-      child: SizedBox(width: 420, height: 220, child: Column(children: [
+      child: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(height: 2, color: kRose),
         const SizedBox(height: 30),
         const Text('Konfirmasi Hapus',
@@ -166,6 +166,7 @@ class _ConfirmDeleteDialog extends StatelessWidget {
               height: 40, width: 180,
               onPressed: () => Navigator.pop(context, true)),
         ]),
+        const SizedBox(height: 24),
       ])),
     );
   }
@@ -210,10 +211,10 @@ class _DeletingDialogState extends State<_DeletingDialog>
   }
 
   String get _elapsedLabel {
-    final m = _elapsed ~/ 60;
+    final h = _elapsed ~/ 3600;
+    final m = (_elapsed % 3600) ~/ 60;
     final s = _elapsed % 60;
-    if (m > 0) return '${m}m ${s.toString().padLeft(2, '0')}s berlalu';
-    return '${s}s berlalu';
+    return '${h.toString().padLeft(2, '0')}:${m.toString().padLeft(2, '0')}:${s.toString().padLeft(2, '0')}';
   }
 
   @override
@@ -221,7 +222,7 @@ class _DeletingDialogState extends State<_DeletingDialog>
     return Dialog(
       backgroundColor: kBgNav,
       shape: const RoundedRectangleBorder(),
-      child: SizedBox(width: 420, height: 230, child: Column(children: [
+      child: SizedBox(width: 420, child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(height: 2, color: kRose),
         const SizedBox(height: 24),
         FadeTransition(
@@ -275,7 +276,8 @@ class _DeletingDialogState extends State<_DeletingDialog>
         ),
         const SizedBox(height: 14),
         Text(_elapsedLabel,
-            style: const TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kAmberDim)),
+            style: const TextStyle(fontFamily: 'Consolas', fontSize: 13, color: kAmberDim, letterSpacing: 1)),
+        const SizedBox(height: 20),
       ])),
     );
   }
@@ -310,7 +312,7 @@ class _SuccessDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(backgroundColor: kBgNav, shape: const RoundedRectangleBorder(),
-      child: SizedBox(width: 380, height: 200, child: Column(children: [
+      child: SizedBox(width: 380, child: Column(mainAxisSize: MainAxisSize.min, children: [
         Container(height: 2, color: kTeal),
         const SizedBox(height: 30),
         const Text('Berhasil dihapus', style: TextStyle(fontFamily: 'Courier New', fontSize: 17, fontWeight: FontWeight.bold, color: kTeal)),
@@ -318,6 +320,7 @@ class _SuccessDialog extends StatelessWidget {
         Text('$count foto dipindahkan ke Recycle Bin.', style: const TextStyle(fontFamily: 'Consolas', fontSize: 11, color: kTextDim)),
         const SizedBox(height: 26),
         SweepButton(label: 'Ke Daftar Grup', bg: kAmber, hover: kAmberHov, textColor: kBg, height: 36, width: 170, onPressed: onToBrowser),
+        const SizedBox(height: 24),
       ])),
     );
   }

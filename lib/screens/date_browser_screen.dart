@@ -185,8 +185,9 @@ class _YearRow extends StatelessWidget {
             Text('$year', style: TextStyle(fontFamily: 'Courier New', fontSize: 18,
                 fontWeight: FontWeight.bold,
                 color: yrExecuted ? kTextMuted : (yrDone ? kTeal : kText),
-                decoration: yrExecuted ? TextDecoration.lineThrough : null,
-                decorationColor: kTextMuted)),
+                decoration: (yrExecuted || yrDone) ? TextDecoration.lineThrough : null,
+                decorationColor: yrExecuted ? kTextMuted : kTeal,
+                decorationThickness: 2.0)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 10),
               child: Text('|', style: TextStyle(fontFamily: 'Consolas', fontSize: 14,
@@ -267,8 +268,9 @@ class _MonthRow extends StatelessWidget {
             Text(moName, style: TextStyle(fontFamily: 'Courier New', fontSize: 15,
                 fontWeight: FontWeight.bold,
                 color: moExecuted ? kTextMuted : (moDone ? kTeal : kText),
-                decoration: moExecuted ? TextDecoration.lineThrough : null,
-                decorationColor: kTextMuted)),
+                decoration: (moExecuted || moDone) ? TextDecoration.lineThrough : null,
+                decorationColor: moExecuted ? kTextMuted : kTeal,
+                decorationThickness: 2.0)),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
               child: Text('|', style: TextStyle(fontFamily: 'Consolas', fontSize: 13,
@@ -324,9 +326,12 @@ class _WeekRow extends StatelessWidget {
     final key = GroupKey(year, month, week);
     final paths = state.dateGroups[key] ?? [];
     final (wkRev, wkTot) = state.progressFor(paths);
-    final wkDone = wkRev >= wkTot && wkTot > 0;
-    final wkExecuted = state.isWeekExecuted(key);
+    // Also check the direct gp entry — progressFor can under-count if paths
+    // were saved under a virtual key rather than this exact week key.
     final gp = state.groupProgress[key];
+    final gpDecided = gp != null ? (gp.delete.length + gp.keep.length) : 0;
+    final wkDone = wkTot > 0 && (wkRev >= wkTot || gpDecided >= wkTot);
+    final wkExecuted = state.isWeekExecuted(key);
     final nDel = gp?.delete.length ?? 0;
     final pct = wkTot > 0 ? wkRev / wkTot : 0.0;
     final moName = AppState.monthName(month);
@@ -362,8 +367,9 @@ class _WeekRow extends StatelessWidget {
           Text('Week $week', style: TextStyle(fontFamily: 'Consolas', fontSize: 13,
               fontWeight: FontWeight.bold,
               color: wkExecuted ? kTextMuted : (wkDone ? kTeal : kTextDim),
-              decoration: wkExecuted ? TextDecoration.lineThrough : null,
-              decorationColor: kTextMuted)),
+              decoration: (wkExecuted || wkDone) ? TextDecoration.lineThrough : null,
+              decorationColor: wkExecuted ? kTextMuted : kTeal,
+              decorationThickness: 2.0)),
           if (dateRange.isNotEmpty) ...[
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8),
